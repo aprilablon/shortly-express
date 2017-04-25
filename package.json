@@ -12,6 +12,7 @@
     "postinstall": "curl -s https://raw.githubusercontent.com/reactorcore/pomander/master/bin/install | bash",
     "start": "nodemon --ignore node_modules server",
     "start:es6": "nodemon --exec node-babel --ignore node_modules server/index.js",
+    "debug": "nodemon --ignore node_modules --inspect server",
     "test": "mocha --bail --reporter nyan test/ServerSpec.js; pkill -n node;",
     "test:es6": "babel-node server/index.js & mocha --compilers js:babel-register --bail --reporter nyan test/ServerSpec.js; pkill -n node;",
     "lint": "eslint ./"
