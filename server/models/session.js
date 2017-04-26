@@ -7,10 +7,8 @@ class Sessions extends Model {
     super('sessions');
   }
 
-  create(userId) {
-    const hash = utils.makeHash(Date.now());
-    super.create.call(this, {user_id: userId, hash}); //eslint-disable-line camelcase
-    return;
+  setUserId(hash, user_id) {       //eslint-disable-line camelcase
+    super.update.call(this, { hash }, { user_id }); //eslint-disable-line camelcase
   }
 }
 

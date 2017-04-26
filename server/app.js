@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const morgan = require('morgan');
 const utils = require('./lib/hashUtils');
 const partials = require('express-partials');
 const bodyParser = require('body-parser');
@@ -8,6 +9,8 @@ const models = require('./models');
 const cookieParser = require('./middleware/cookieParser');
 
 const app = express();
+
+// app.use(morgan('default'));
 
 app.set('views', `${__dirname}/views`);
 app.set('view engine', 'ejs');
@@ -23,18 +26,27 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use(cookieParser);
 app.use(Auth.createSession);
 
-
-app.get('/',
+app.get('/', Auth.authentication,
 (req, res) => {
   res.render('index');
 });
 
-app.get('/create',
+app.get('/create', Auth.authentication,
 (req, res) => {
   res.render('index');
 });
 
-app.get('/links',
+app.get('/signup',
+(req, res) => {
+  res.render('signup');
+});
+
+app.get('/login',
+(req, res) => {
+  res.render('login');
+});
+
+app.get('/links', Auth.authentication,
 (req, res, next) => {
   models.Links.getAll()
     .then(links => {
@@ -87,17 +99,25 @@ app.post('/links',
 
 app.post('/signup', (req, res) => {
   const { username } = req.body;
+
   models.Users.get({ username })
     .then(user => {
       if (user) {
+        models.Sessions.setUserId(req.session.hash, user.id);
         res.redirect('/login');
         return;
       }
-      models.Users.create(req.body);
-      res.redirect('/');
+      throw 'no user';
     })
     .catch(error => {
-      res.status(500).send(error);
+      Promise.resolve( models.Users.create(req.body) )
+        .then(() => models.Users.get({ username }))
+        .then((user) => {
+          models.Sessions.setUserId(req.session.hash, user.id);
+        })
+        .then(() => {
+          res.redirect('/');
+        });
     });
 });
 
@@ -108,6 +128,7 @@ app.post('/login', (req, res) => {
   models.Users.get({ username, password: hash })
     .then(user => {
       if (user) {
+        models.Sessions.setUserId(req.session.hash, user.id);    //eslint-disable-line camelcase
         res.redirect('/');
         return;
       }
@@ -123,10 +144,8 @@ app.post('/login', (req, res) => {
 /************************************************************/
 
 app.get('/:code', (req, res, next) => {
-
   return models.Links.get({ code: req.params.code })
     .tap(link => {
-
       if (!link) {
         throw new Error('Link does not exist');
       }
